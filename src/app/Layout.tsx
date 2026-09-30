@@ -26,7 +26,7 @@ export function Layout() {
           +
         </Link>
       )}
-      <nav className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-800 dark:bg-slate-900">
+      <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-800 dark:bg-slate-900">
         <ul className="mx-auto flex max-w-2xl">
           {tabs.map((t) => (
             <li key={t.to} className="flex-1">
@@ -34,7 +34,7 @@ export function Layout() {
                 to={t.to}
                 end={t.end}
                 className={({ isActive }) =>
-                  `block py-3 text-center text-sm ${isActive ? "font-semibold text-indigo-600" : "text-slate-500"}`
+                  `block py-3 text-center text-sm ${isActive ? "font-semibold text-indigo-600 dark:text-indigo-400" : "text-slate-500"}`
                 }
               >
                 {t.label}

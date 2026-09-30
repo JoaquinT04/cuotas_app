@@ -9,8 +9,8 @@ interface Props {
   children: ReactNode;
 }
 
-export class ErrorBoundary extends Component<Props, { error: Error | null }> {
-  state = { error: null as Error | null };
+export class ErrorBoundary extends Component<Props, { error: Error | null; exportFailed: boolean }> {
+  state = { error: null as Error | null, exportFailed: false };
 
   static getDerivedStateFromError(error: Error) {
     return { error };
@@ -21,7 +21,12 @@ export class ErrorBoundary extends Component<Props, { error: Error | null }> {
   }
 
   private handleExport = async () => {
-    downloadJson(backupFileName(), await exportBackup(this.props.db));
+    try {
+      downloadJson(backupFileName(), await exportBackup(this.props.db));
+      this.setState({ exportFailed: false });
+    } catch {
+      this.setState({ exportFailed: true });
+    }
   };
 
   render() {
@@ -38,6 +43,11 @@ export class ErrorBoundary extends Component<Props, { error: Error | null }> {
             Exportar backup
           </button>
         </div>
+        {this.state.exportFailed && (
+          <p role="alert" className="text-sm text-red-600">
+            No se pudo exportar el backup.
+          </p>
+        )}
       </div>
     );
   }

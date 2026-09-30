@@ -1,5 +1,7 @@
 import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { createDb } from "../data/db";
+import { StorageBanner } from "./StorageBanner";
 import { AppRoutes } from "../routes";
 import { renderApp } from "../test/render";
 
@@ -23,5 +25,14 @@ describe("Layout", () => {
     renderApp(<AppRoutes />);
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText(/No se pueden guardar datos/)).toBeNull();
+  });
+
+  it("muestra aviso si IndexedDB no está disponible", async () => {
+    const db = createDb(`test-${crypto.randomUUID()}`);
+    vi.spyOn(db, "open").mockRejectedValue(new Error("x"));
+    renderApp(<StorageBanner />, { db });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No se pueden guardar datos en este navegador (¿modo incógnito?).",
+    );
   });
 });

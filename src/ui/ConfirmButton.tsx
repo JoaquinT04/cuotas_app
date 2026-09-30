@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ConfirmButtonProps {
   label: string;
@@ -15,6 +15,11 @@ export function ConfirmButton({
   confirmLabel = "¿Seguro? Tocá de nuevo",
 }: ConfirmButtonProps) {
   const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 4000);
+    return () => clearTimeout(t);
+  }, [armed]);
   return (
     <button
       type="button"

@@ -5,5 +5,5 @@ export function downloadJson(filename: string, data: unknown): void {
   a.href = url;
   a.download = filename;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
