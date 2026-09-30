@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { BackupReminder } from "./BackupReminder";
 import { StorageBanner } from "./StorageBanner";
 
 const tabs = [
@@ -14,6 +15,7 @@ export function Layout() {
   return (
     <div className="min-h-dvh bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <StorageBanner />
+      <BackupReminder />
       <main className="mx-auto max-w-2xl space-y-4 px-4 pt-4 pb-28">
         <Outlet />
       </main>
