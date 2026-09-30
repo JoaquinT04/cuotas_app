@@ -20,6 +20,8 @@ export function PurchaseList({ purchases, cards, current }: Props) {
   const groups = cards
     .map((card) => ({ card, items: purchases.filter((p) => p.cardId === card.id) }))
     .filter((g) => g.items.length > 0);
+  const known = new Set(cards.map((c) => c.id));
+  const orphans = purchases.filter((p) => !known.has(p.cardId));
   return (
     <>
       {groups.map(({ card, items }) => (
@@ -31,6 +33,15 @@ export function PurchaseList({ purchases, cards, current }: Props) {
           </ul>
         </Panel>
       ))}
+      {orphans.length > 0 && (
+        <Panel title="Sin tarjeta">
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+            {orphans.map((p) => (
+              <PurchaseItem key={p.id} purchase={p} color="#94a3b8" current={current} />
+            ))}
+          </ul>
+        </Panel>
+      )}
     </>
   );
 }

@@ -18,6 +18,7 @@ async function seed() {
   await r.repos.purchases.put(makePurchase({ id: "old", cardId: "visa", description: "Zapatillas", firstMonth: "2026-01", installmentsCount: 3 }));
   await r.repos.purchases.put(makePurchase({ id: "fut", cardId: "visa", description: "Viaje", firstMonth: "2026-11", installmentsCount: 3 }));
   await screen.findByText("Tele");
+  await screen.findByText("Viaje");
   return r;
 }
 
@@ -51,5 +52,26 @@ describe("PurchasesPage", () => {
     expect(fut.dataset.end).toBe("7");
     expect(screen.queryByTestId("gantt-bar-old")).toBeNull();
     expect(within(screen.getByTestId("gantt")).getByText("Tele")).toBeInTheDocument();
+  });
+
+  it("gantt excluye compras más allá de las columnas visibles y avisa", async () => {
+    const user = userEvent.setup();
+    const r = await seed();
+    await r.repos.purchases.put(makePurchase({ id: "big", cardId: "visa", description: "Largo", firstMonth: "2026-09", installmentsCount: 48 }));
+    await r.repos.purchases.put(makePurchase({ id: "late", cardId: "visa", description: "Lejana", firstMonth: "2029-01", installmentsCount: 3 }));
+    await screen.findByText("Largo");
+    await user.click(screen.getByRole("button", { name: "Gantt" }));
+    expect(screen.queryByTestId("gantt-bar-late")).toBeNull();
+    expect(screen.getByText(/1 compra empieza después de/)).toBeInTheDocument();
+    const bars = within(screen.getByTestId("gantt")).getAllByTestId(/^gantt-bar-/);
+    expect(bars.length).toBeGreaterThan(0);
+    for (const b of bars) expect(Number(b.dataset.start)).toBeLessThanOrEqual(Number(b.dataset.end));
+  });
+
+  it("muestra bajo 'Sin tarjeta' las compras con tarjeta desconocida", async () => {
+    const r = await seed();
+    await r.repos.purchases.put(makePurchase({ id: "gh", cardId: "ghost", description: "Huérfana", firstMonth: "2026-08", installmentsCount: 6 }));
+    await screen.findByText("Huérfana");
+    expect(screen.getByText("Sin tarjeta")).toBeInTheDocument();
   });
 });
