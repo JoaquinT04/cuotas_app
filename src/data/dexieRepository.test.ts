@@ -59,6 +59,38 @@ describe("dexie repository", () => {
     await vi.waitFor(() => expect(seen.at(-1)?.map((c) => c.name)).toEqual(["Master"]));
     unsubscribe();
   });
+
+  it("put de una copia vieja no resucita un borrado", async () => {
+    const card = makeCard();
+    await repo.put(card);
+    await repo.remove(card.id);
+    await repo.put(card);
+    expect(await repo.list()).toEqual([]);
+    expect(await repo.get(card.id)).toBeUndefined();
+    expect((await db.cards.get(card.id))?.deletedAt).toBeDefined();
+  });
+
+  it("subscribe emite lista reducida tras remove", async () => {
+    const card = makeCard();
+    await repo.put(card);
+    const seen: Card[][] = [];
+    const unsubscribe = repo.subscribe((items) => seen.push(items));
+    await vi.waitFor(() => expect(seen.at(-1)).toHaveLength(1));
+    await repo.remove(card.id);
+    await vi.waitFor(() => expect(seen.at(-1)).toEqual([]));
+    unsubscribe();
+  });
+
+  it("unsubscribe detiene las emisiones", async () => {
+    const seen: Card[][] = [];
+    const unsubscribe = repo.subscribe((items) => seen.push(items));
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    unsubscribe();
+    const count = seen.length;
+    await repo.put(makeCard({ name: "Otra" }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(seen.length).toBe(count);
+  });
 });
 
 describe("meta", () => {
