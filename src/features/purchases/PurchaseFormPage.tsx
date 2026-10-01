@@ -23,8 +23,9 @@ export function PurchaseFormPage() {
           label="Eliminar compra"
           className={`${dangerButtonClass} w-full`}
           onConfirm={async () => {
-            await repos.purchases.remove(initial.id);
+            // Primero navegar: si no, la página re-renderiza sin la compra y muestra "No se encontró".
             navigate("/compras");
+            await repos.purchases.remove(initial.id);
           }}
         />
       )}
