@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { ErrorBoundary } from "./app/ErrorBoundary";
+import { UpdatePrompt } from "./app/UpdatePrompt";
 import { RepoProvider } from "./app/RepoProvider";
 import { createDb } from "./data/db";
 import { requestPersistence } from "./data/storage";
@@ -15,6 +16,7 @@ createRoot(document.getElementById("root")!).render(
     <ErrorBoundary db={db}>
       <RepoProvider db={db}>
         <App />
+        <UpdatePrompt />
       </RepoProvider>
     </ErrorBoundary>
   </StrictMode>,
