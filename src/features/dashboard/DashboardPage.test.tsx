@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeCard, makeFixedExpense, makeIncome, makePurchase } from "../../test/factories";
@@ -25,13 +25,14 @@ describe("DashboardPage", () => {
     await repos.fixedExpenses.put(makeFixedExpense({ amount: 20000000 }));
     await repos.purchases.put(makePurchase({ cardId: "visa", firstMonth: "2026-09", installmentsCount: 3, installmentAmount: 1000000 }));
 
-    expect(await screen.findByTestId("available-ARS")).toHaveTextContent(/290\.000,00/);
+    await waitFor(() => expect(screen.getByTestId("available-ARS")).toHaveTextContent(/290\.000,00/));
     expect(await screen.findByText(/1 compra · última cuota/)).toBeInTheDocument();
     expect(screen.getByText("Visa")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /sept|sep/i }).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("button", { name: "Mes siguiente" }));
-    expect(await screen.findByTestId("available-ARS")).toHaveTextContent(/290\.000,00/);
+    expect(screen.getByRole("heading", { level: 1, name: /oct/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("available-ARS")).toHaveTextContent(/290\.000,00/));
   });
 
   it("disponible negativo se marca en rojo", async () => {

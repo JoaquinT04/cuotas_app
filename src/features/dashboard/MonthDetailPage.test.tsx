@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 import { makeCard, makeIncome, makePurchase } from "../../test/factories";
@@ -19,7 +19,7 @@ describe("MonthDetailPage", () => {
     await repos.purchases.put(makePurchase({ cardId: "visa", description: "Tele", firstMonth: "2026-10", installmentsCount: 6 }));
     expect(await screen.findByText("Tele")).toBeInTheDocument();
     expect(await screen.findByText("Sueldo")).toBeInTheDocument();
-    expect(screen.getByText(/Visa · 2\/6/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Visa · 2\/6/)).toBeInTheDocument());
   });
 
   it("mes inválido muestra mensaje", () => {

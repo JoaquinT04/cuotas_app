@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeCard, makePurchase } from "../../test/factories";
@@ -25,8 +25,8 @@ async function seed() {
 describe("PurchasesPage", () => {
   it("por defecto muestra activas con número de cuota", async () => {
     await seed();
-    expect(screen.getByText("Cuota 2/6")).toBeInTheDocument();
-    expect(screen.getByText(/Empieza/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Cuota 2/6")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Empieza/)).toBeInTheDocument());
     expect(screen.queryByText("Zapatillas")).toBeNull();
   });
 
@@ -34,7 +34,7 @@ describe("PurchasesPage", () => {
     const user = userEvent.setup();
     await seed();
     await user.click(screen.getByRole("button", { name: "Terminadas" }));
-    expect(screen.getByText("Zapatillas")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Zapatillas")).toBeInTheDocument());
     expect(screen.queryByText("Tele")).toBeNull();
   });
 
@@ -62,7 +62,7 @@ describe("PurchasesPage", () => {
     await screen.findByText("Largo");
     await user.click(screen.getByRole("button", { name: "Gantt" }));
     expect(screen.queryByTestId("gantt-bar-late")).toBeNull();
-    expect(screen.getByText(/1 compra empieza después de/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/1 compra empieza después de/)).toBeInTheDocument());
     const bars = within(screen.getByTestId("gantt")).getAllByTestId(/^gantt-bar-/);
     expect(bars.length).toBeGreaterThan(0);
     for (const b of bars) expect(Number(b.dataset.start)).toBeLessThanOrEqual(Number(b.dataset.end));
@@ -72,6 +72,6 @@ describe("PurchasesPage", () => {
     const r = await seed();
     await r.repos.purchases.put(makePurchase({ id: "gh", cardId: "ghost", description: "Huérfana", firstMonth: "2026-08", installmentsCount: 6 }));
     await screen.findByText("Huérfana");
-    expect(screen.getByText("Sin tarjeta")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Sin tarjeta")).toBeInTheDocument());
   });
 });
