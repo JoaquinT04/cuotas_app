@@ -3,7 +3,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { BudgetData } from "../domain/budget";
 import { currentMonth, todayIso, type Month } from "../domain/month";
 import type { Entity } from "../domain/schemas";
-import { getMeta, type Meta } from "../data/db";
+import { getMeta, PRE_IMPORT_SNAPSHOT_KEY, type Meta } from "../data/db";
 import type { Repos } from "../data/repos";
 import type { Repository } from "../data/repository";
 import { AppDataContext, type AppData } from "./context";
@@ -56,6 +56,18 @@ export function useMeta(): Meta | undefined {
     return () => sub.unsubscribe();
   }, [db]);
   return meta;
+}
+
+export function useHasPreImportSnapshot(): boolean {
+  const { db } = useAppData();
+  const [has, setHas] = useState(false);
+  useEffect(() => {
+    const sub = liveQuery(() => db.meta.where("key").equals(PRE_IMPORT_SNAPSHOT_KEY).count()).subscribe({
+      next: (n) => setHas(n > 0),
+    });
+    return () => sub.unsubscribe();
+  }, [db]);
+  return has;
 }
 
 export function useNotify(): Notify {

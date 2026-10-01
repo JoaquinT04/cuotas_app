@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from "react";
-import { backupFileName, exportBackup } from "../data/backup";
+import { backupFileName, saveBackup } from "../data/backup";
 import type { CuotasDB } from "../data/db";
-import { downloadJson } from "../ui/download";
+import { isAbortError, saveJson } from "../ui/download";
 import { buttonClass, secondaryButtonClass } from "../ui/styles";
 
 interface Props {
@@ -22,10 +22,10 @@ export class ErrorBoundary extends Component<Props, { error: Error | null; expor
 
   private handleExport = async () => {
     try {
-      downloadJson(backupFileName(), await exportBackup(this.props.db));
+      await saveBackup(this.props.db, saveJson, backupFileName());
       this.setState({ exportFailed: false });
-    } catch {
-      this.setState({ exportFailed: true });
+    } catch (err) {
+      this.setState({ exportFailed: !isAbortError(err) });
     }
   };
 

@@ -3,7 +3,9 @@ import { todayIso } from "../domain/month";
 import {
   budgetCategorySchema, cardSchema, fixedExpenseSchema, incomeSchema, purchaseSchema,
 } from "../domain/schemas";
-import { SCHEMA_VERSION, setLastBackupAt, type CuotasDB, type Meta } from "./db";
+import {
+  PRE_IMPORT_SNAPSHOT_KEY, SCHEMA_VERSION, setLastBackupAt, type CuotasDB, type Meta,
+} from "./db";
 
 const backupDataSchema = z.object({
   cards: z.array(cardSchema),
@@ -75,16 +77,37 @@ export async function exportBackup(db: CuotasDB, now: Date = new Date()): Promis
     fixedExpenses: await db.fixedExpenses.toArray(),
     categories: await db.categories.toArray(),
   };
-  await setLastBackupAt(db, now.toISOString());
   return { app: "cuotas-app", schemaVersion: SCHEMA_VERSION, exportedAt: now.toISOString(), data };
 }
 
-export async function importBackup(db: CuotasDB, backup: BackupFile): Promise<void> {
+export type SaveFile = (filename: string, data: unknown) => Promise<void>;
+
+/** Exporta y guarda. lastBackupAt se marca sólo si el guardado terminó sin error. */
+export async function saveBackup(
+  db: CuotasDB,
+  save: SaveFile,
+  filename: string,
+  now: Date = new Date(),
+): Promise<BackupFile> {
+  const backup = await exportBackup(db, now);
+  await save(filename, backup);
+  await setLastBackupAt(db, backup.exportedAt);
+  return backup;
+}
+
+const allTables = (db: CuotasDB) => [db.cards, db.purchases, db.incomes, db.fixedExpenses, db.categories, db.meta];
+
+/**
+ * Reemplaza todos los datos por los del backup. Con `snapshot`, guarda en la misma transacción
+ * una copia de lo anterior para poder volver atrás.
+ */
+export async function importBackup(db: CuotasDB, backup: BackupFile, snapshot?: BackupFile): Promise<void> {
   const { data } = backup;
   await db.transaction(
     "rw",
-    [db.cards, db.purchases, db.incomes, db.fixedExpenses, db.categories],
+    allTables(db),
     async () => {
+      if (snapshot) await db.meta.put({ key: PRE_IMPORT_SNAPSHOT_KEY, backup: snapshot });
       await Promise.all([
         db.cards.clear(),
         db.purchases.clear(),
@@ -99,6 +122,23 @@ export async function importBackup(db: CuotasDB, backup: BackupFile): Promise<vo
       await db.categories.bulkPut(data.categories);
     },
   );
+}
+
+export async function getPreImportSnapshot(db: CuotasDB): Promise<BackupFile | undefined> {
+  const row = await db.meta.get(PRE_IMPORT_SNAPSHOT_KEY);
+  if (row?.key !== PRE_IMPORT_SNAPSHOT_KEY) return undefined;
+  const parsed = parseBackup(row.backup);
+  return parsed.ok ? parsed.backup : undefined;
+}
+
+/** Vuelve a los datos previos a la última importación y descarta la copia. */
+export async function restorePreImportSnapshot(db: CuotasDB): Promise<void> {
+  await db.transaction("rw", allTables(db), async () => {
+    const snapshot = await getPreImportSnapshot(db);
+    if (!snapshot) throw new Error("No hay copia previa a la importación.");
+    await importBackup(db, snapshot);
+    await db.meta.delete(PRE_IMPORT_SNAPSHOT_KEY);
+  });
 }
 
 export function backupSummary(backup: BackupFile): Record<keyof BackupData, number> {
@@ -122,5 +162,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 export function shouldRemindBackup(meta: Meta, hasData: boolean, now: Date): boolean {
   if (!hasData) return false;
   if (!meta.lastBackupAt) return true;
-  return now.getTime() - Date.parse(meta.lastBackupAt) > THIRTY_DAYS_MS;
+  const last = Date.parse(meta.lastBackupAt);
+  if (Number.isNaN(last)) return true;
+  return now.getTime() - last > THIRTY_DAYS_MS;
 }

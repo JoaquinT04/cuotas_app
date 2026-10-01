@@ -6,6 +6,7 @@ interface ConfirmButtonProps {
   onConfirm: () => unknown;
   className?: string;
   confirmLabel?: string;
+  failMessage?: string;
 }
 
 /** Un toque de confirmación que llega antes de esto es parte del mismo gesto (doble toque). */
@@ -17,11 +18,12 @@ export function ConfirmButton({
   onConfirm,
   className,
   confirmLabel = "¿Seguro? Tocá de nuevo",
+  failMessage,
 }: ConfirmButtonProps) {
   const [armed, setArmed] = useState(false);
   // performance.now() y no Date.now(): es monotónico y los tests congelan Date.
   const armedAt = useRef(0);
-  const action = useAction(onConfirm);
+  const action = useAction(onConfirm, failMessage);
   useEffect(() => {
     if (!armed) return;
     const t = setTimeout(() => setArmed(false), 4000);

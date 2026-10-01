@@ -1,10 +1,11 @@
 import { useId, useState, type ChangeEvent } from "react";
-import { useAction, useAppData, useMeta } from "../../app/hooks";
+import { useAction, useAppData, useHasPreImportSnapshot, useMeta } from "../../app/hooks";
 import {
-  backupFileName, backupSummary, exportBackup, importBackup, parseBackupText, type BackupFile,
+  backupFileName, backupSummary, importBackup, parseBackupText, restorePreImportSnapshot, saveBackup,
+  type BackupFile,
 } from "../../data/backup";
 import { ConfirmButton } from "../../ui/ConfirmButton";
-import { downloadJson } from "../../ui/download";
+import { isAbortError, saveJson } from "../../ui/download";
 import { Panel } from "../../ui/Panel";
 import { buttonClass, dangerButtonClass, secondaryButtonClass } from "../../ui/styles";
 
@@ -12,13 +13,23 @@ export function BackupSection() {
   const id = useId();
   const { db } = useAppData();
   const meta = useMeta();
+  const hasSnapshot = useHasPreImportSnapshot();
   const [pending, setPending] = useState<BackupFile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  /** Exporta y guarda; devuelve undefined si la persona canceló el guardado. */
+  async function saveCopy(filename: string): Promise<BackupFile | undefined> {
+    try {
+      return await saveBackup(db, saveJson, filename);
+    } catch (err) {
+      if (isAbortError(err)) return undefined;
+      throw err;
+    }
+  }
+
   const exportAction = useAction(async () => {
-    downloadJson(backupFileName(), await exportBackup(db));
-    setMessage("Backup exportado.");
+    if (await saveCopy(backupFileName())) setMessage("Backup exportado.");
   }, "No se pudo exportar el backup.");
 
   const readFile = useAction(async (selected: File) => {
@@ -42,10 +53,18 @@ export function BackupSection() {
 
   async function confirmImport() {
     if (!pending) return;
-    downloadJson(`antes-de-importar-${backupFileName()}`, await exportBackup(db));
-    await importBackup(db, pending);
+    // Si no se pudo guardar la copia (o se canceló) no importamos nada.
+    const snapshot = await saveCopy(`antes-de-importar-${backupFileName()}`);
+    if (!snapshot) return;
+    await importBackup(db, pending, snapshot);
     setPending(null);
     setMessage("Datos importados.");
+  }
+
+  async function restoreSnapshot() {
+    await restorePreImportSnapshot(db);
+    setPending(null);
+    setMessage("Copia previa restaurada.");
   }
 
   const summary = pending ? backupSummary(pending) : null;
@@ -72,13 +91,26 @@ export function BackupSection() {
           <p>
             El backup tiene {summary.cards} tarjetas, {summary.purchases} compras, {summary.incomes} ingresos,{" "}
             {summary.fixedExpenses} gastos fijos y {summary.categories} categorías. Reemplaza todos tus datos actuales
-            (antes se descarga una copia de lo que tenés).
+            (antes se guarda una copia de lo que tenés).
           </p>
           <div className="flex gap-2">
-            <ConfirmButton label="Reemplazar mis datos" className={dangerButtonClass} onConfirm={confirmImport} />
+            <ConfirmButton
+              label="Reemplazar mis datos"
+              className={dangerButtonClass}
+              onConfirm={confirmImport}
+              failMessage="No se pudo importar el backup."
+            />
             <button type="button" className={secondaryButtonClass} onClick={() => setPending(null)}>Cancelar</button>
           </div>
         </div>
+      )}
+      {hasSnapshot && (
+        <ConfirmButton
+          label="Restaurar copia previa a la última importación"
+          className={secondaryButtonClass}
+          onConfirm={restoreSnapshot}
+          failMessage="No se pudo restaurar la copia previa."
+        />
       )}
     </Panel>
   );

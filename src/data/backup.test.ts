@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeCard, makePurchase } from "../test/factories";
 import {
-  backupFileName, backupSummary, exportBackup, importBackup, parseBackup, parseBackupText,
-  shouldRemindBackup,
+  backupFileName, backupSummary, exportBackup, getPreImportSnapshot, importBackup, parseBackup, parseBackupText,
+  restorePreImportSnapshot, saveBackup, shouldRemindBackup,
 } from "./backup";
 import { createDb, getMeta, SCHEMA_VERSION, type CuotasDB } from "./db";
 
@@ -19,7 +19,7 @@ afterEach(async () => {
 });
 
 describe("exportBackup", () => {
-  it("incluye todo (también borrados) y registra lastBackupAt", async () => {
+  it("incluye todo (también borrados) y no marca lastBackupAt (todavía no se guardó nada)", async () => {
     await db.cards.put(makeCard());
     await db.purchases.put(makePurchase({ deletedAt: "2026-01-02T00:00:00.000Z" }));
     const now = new Date("2026-09-30T12:00:00.000Z");
@@ -28,7 +28,48 @@ describe("exportBackup", () => {
     expect(backup.schemaVersion).toBe(SCHEMA_VERSION);
     expect(backup.data.cards).toHaveLength(1);
     expect(backup.data.purchases).toHaveLength(1);
+    expect((await getMeta(db)).lastBackupAt).toBeUndefined();
+  });
+});
+
+describe("saveBackup", () => {
+  it("marca lastBackupAt sólo después de guardar el archivo", async () => {
+    await db.cards.put(makeCard());
+    const now = new Date("2026-09-30T12:00:00.000Z");
+    const saveFile = vi.fn(async () => {
+      expect((await getMeta(db)).lastBackupAt).toBeUndefined();
+    });
+    const backup = await saveBackup(db, saveFile, "x.json", now);
+    expect(saveFile).toHaveBeenCalledWith("x.json", backup);
     expect((await getMeta(db)).lastBackupAt).toBe(now.toISOString());
+  });
+
+  it("si guardar falla no marca lastBackupAt y propaga el error", async () => {
+    const err = new DOMException("cancelado", "AbortError");
+    await expect(saveBackup(db, () => Promise.reject(err), "x.json")).rejects.toBe(err);
+    expect((await getMeta(db)).lastBackupAt).toBeUndefined();
+  });
+});
+
+describe("copia previa a importar", () => {
+  it("importBackup con snapshot lo guarda en meta y restaurarlo vuelve atrás y lo borra", async () => {
+    await db.cards.put(makeCard({ name: "Vieja" }));
+    const snapshot = await exportBackup(db);
+    await other.cards.put(makeCard({ name: "Nueva" }));
+    const incoming = await exportBackup(other);
+    await importBackup(db, incoming, snapshot);
+    expect((await db.cards.toArray()).map((c) => c.name)).toEqual(["Nueva"]);
+    expect((await getPreImportSnapshot(db))?.data.cards.map((c) => c.name)).toEqual(["Vieja"]);
+
+    await restorePreImportSnapshot(db);
+    expect((await db.cards.toArray()).map((c) => c.name)).toEqual(["Vieja"]);
+    expect(await getPreImportSnapshot(db)).toBeUndefined();
+  });
+
+  it("importBackup sin snapshot no toca la copia previa ni lastBackupAt", async () => {
+    await importBackup(db, await exportBackup(other));
+    expect(await getPreImportSnapshot(db)).toBeUndefined();
+    expect((await getMeta(db)).lastBackupAt).toBeUndefined();
   });
 });
 
@@ -102,5 +143,8 @@ describe("shouldRemindBackup", () => {
     const meta = { key: "meta" as const, schemaVersion: 1 };
     expect(shouldRemindBackup({ ...meta, lastBackupAt: "2026-08-15T00:00:00.000Z" }, true, now)).toBe(true);
     expect(shouldRemindBackup({ ...meta, lastBackupAt: "2026-09-10T00:00:00.000Z" }, true, now)).toBe(false);
+  });
+  it("recuerda si la fecha guardada es ilegible", () => {
+    expect(shouldRemindBackup({ key: "meta", schemaVersion: 1, lastBackupAt: "basura" }, true, now)).toBe(true);
   });
 });
