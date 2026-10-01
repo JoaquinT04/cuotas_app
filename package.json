@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
+    "e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/icon.svg"
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
