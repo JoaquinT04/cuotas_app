@@ -7,10 +7,10 @@ export function UpdatePrompt() {
   } = useRegisterSW();
   if (!needRefresh) return null;
   return (
-    <div role="status" className="fixed inset-x-4 bottom-20 z-50 flex items-center justify-between gap-2 rounded-xl bg-slate-900 p-3 text-sm text-white shadow-lg">
+    <div role="status" className="fixed inset-x-4 bottom-20 z-50 flex items-center justify-between gap-2 rounded-xl bg-slate-900 p-3 text-sm text-white shadow-lg ring-1 ring-white/10">
       <span>Actualización disponible</span>
       <div className="flex gap-3">
-        <button type="button" onClick={() => setNeedRefresh(false)}>Después</button>
+        <button type="button" className="text-slate-300" onClick={() => setNeedRefresh(false)}>Después</button>
         <button type="button" className="font-semibold text-indigo-300" onClick={() => void updateServiceWorker(true)}>
           Recargar
         </button>
