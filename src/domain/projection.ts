@@ -59,14 +59,17 @@ export interface PreviewRow {
   after: Money;
 }
 
-export function previewPurchase(data: BudgetData, draft: Purchase): PreviewRow[] {
+/** Sólo meses >= from: los meses ya pasados no pueden "quedar en negativo" por esta compra. */
+export function previewPurchase(data: BudgetData, draft: Purchase, from: Month): PreviewRow[] {
   const after: BudgetData = {
     ...data,
     purchases: [...data.purchases.filter((p) => p.id !== draft.id), draft],
   };
-  return installmentsOf(draft).map(({ month }) => ({
-    month,
-    before: monthBreakdown(data, month)[draft.currency]?.available ?? 0,
-    after: monthBreakdown(after, month)[draft.currency]?.available ?? 0,
-  }));
+  return installmentsOf(draft)
+    .filter(({ month }) => month >= from)
+    .map(({ month }) => ({
+      month,
+      before: monthBreakdown(data, month)[draft.currency]?.available ?? 0,
+      after: monthBreakdown(after, month)[draft.currency]?.available ?? 0,
+    }));
 }

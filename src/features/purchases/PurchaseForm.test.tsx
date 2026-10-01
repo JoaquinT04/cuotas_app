@@ -87,4 +87,15 @@ describe("PurchaseForm", () => {
     await user.type(screen.getByLabelText("Valor de la cuota"), "2500");
     expect(await screen.findByText(/Todos los meses quedan en positivo/)).toBeInTheDocument();
   });
+
+  it("la vista previa ignora meses ya pasados de una compra en curso", async () => {
+    const original = makePurchase({ id: "p1", cardId: "visa", firstMonth: "2026-06", installmentsCount: 4, installmentAmount: 100000 });
+    const r = renderApp(<PurchaseForm initial={original} onSaved={vi.fn()} />);
+    await r.repos.cards.put(makeCard({ id: "visa", name: "Visa" }));
+    await r.repos.incomes.put(makeIncome({ amount: 300000, startMonth: "2026-09" }));
+    await r.repos.purchases.put(original);
+    await screen.findByRole("option", { name: "Visa" });
+    expect(await screen.findByText(/Todos los meses quedan en positivo/)).toBeInTheDocument();
+    expect(screen.queryByText(/junio/i)).not.toBeInTheDocument();
+  });
 });

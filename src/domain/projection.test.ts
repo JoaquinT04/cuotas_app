@@ -41,7 +41,7 @@ describe("previewPurchase", () => {
 
   it("compra nueva: after = before - cuota en cada mes", () => {
     const draft = makePurchase({ id: "draft", firstMonth: "2026-10", installmentsCount: 2, installmentAmount: 4000 });
-    expect(previewPurchase(data, draft)).toEqual([
+    expect(previewPurchase(data, draft, "2026-09")).toEqual([
       { month: "2026-10", before: 10000, after: 6000 },
       { month: "2026-11", before: 10000, after: 6000 },
     ]);
@@ -49,13 +49,20 @@ describe("previewPurchase", () => {
 
   it("marca meses negativos", () => {
     const draft = makePurchase({ id: "draft", firstMonth: "2026-10", installmentsCount: 1, installmentAmount: 15000 });
-    expect(previewPurchase(data, draft)[0].after).toBe(-5000);
+    expect(previewPurchase(data, draft, "2026-09")[0].after).toBe(-5000);
   });
 
   it("editar no cuenta dos veces la compra original", () => {
     const original = makePurchase({ id: "p1", firstMonth: "2026-10", installmentsCount: 1, installmentAmount: 1000 });
     const edited = { ...original, installmentAmount: 3000 };
-    const [row] = previewPurchase({ ...data, purchases: [original] }, edited);
+    const [row] = previewPurchase({ ...data, purchases: [original] }, edited, "2026-09");
     expect(row).toEqual({ month: "2026-10", before: 9000, after: 7000 });
+  });
+
+  it("sólo devuelve meses desde from (los pasados ya se pagaron)", () => {
+    const draft = makePurchase({ id: "draft", firstMonth: "2026-07", installmentsCount: 4, installmentAmount: 15000 });
+    const rows = previewPurchase(data, draft, "2026-09");
+    expect(rows.map((r) => r.month)).toEqual(["2026-09", "2026-10"]);
+    expect(rows.every((r) => r.after === -5000)).toBe(true);
   });
 });

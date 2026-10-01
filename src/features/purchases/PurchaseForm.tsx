@@ -25,7 +25,7 @@ export function PurchaseForm({ initial, onSaved }: Props) {
   const { repos } = useAppData();
   const cards = useCards();
   const data = useBudgetData();
-  const { today } = useToday();
+  const { today, month: currentMonth } = useToday();
 
   const [cardId, setCardId] = useState(initial?.cardId ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -82,7 +82,7 @@ export function PurchaseForm({ initial, onSaved }: Props) {
   const draft: Purchase | null = parsed.success
     ? { ...parsed.data, id: initial?.id ?? "draft", createdAt: initial?.createdAt ?? "", updatedAt: "" }
     : null;
-  const preview = draft ? previewPurchase(data, draft) : [];
+  const preview = draft ? previewPurchase(data, draft, currentMonth) : [];
 
   const amountHint =
     installmentAmount !== null && validCount
