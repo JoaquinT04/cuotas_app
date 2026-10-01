@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { Link } from "react-router";
-import { useAppData, useBudgetData, useCards, useToday } from "../../app/hooks";
+import { useAction, useAppData, useBudgetData, useCards, useToday } from "../../app/hooks";
 import { newEntity } from "../../data/repository";
 import { defaultFirstMonth, suggestFirstMonth } from "../../domain/closing";
 import {
@@ -38,6 +38,10 @@ export function PurchaseForm({ initial, onSaved }: Props) {
   const [firstMonthTouched, setFirstMonthTouched] = useState(initial !== undefined);
   const [category, setCategory] = useState(initial?.category ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const save = useAction(async (purchase: Purchase) => {
+    await repos.purchases.put(purchase);
+    onSaved();
+  });
 
   if (!cards || !data) return <p>Cargando…</p>;
 
@@ -91,7 +95,7 @@ export function PurchaseForm({ initial, onSaved }: Props) {
         : `Total ${formatMoney(installmentAmount * countNum, currency)}`
       : undefined;
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!parsed.success) {
       const errs = fieldErrors(parsed.error);
@@ -99,8 +103,7 @@ export function PurchaseForm({ initial, onSaved }: Props) {
       setErrors(errs);
       return;
     }
-    await repos.purchases.put(initial ? { ...initial, ...parsed.data } : newEntity(parsed.data));
-    onSaved();
+    void save.run(initial ? { ...initial, ...parsed.data } : newEntity(parsed.data));
   }
 
   return (
@@ -177,7 +180,7 @@ export function PurchaseForm({ initial, onSaved }: Props) {
 
       <PurchasePreview rows={preview} currency={currency} />
 
-      <button type="submit" className={`${buttonClass} w-full`}>Guardar compra</button>
+      <button type="submit" className={`${buttonClass} w-full`} disabled={save.pending}>Guardar compra</button>
     </form>
   );
 }

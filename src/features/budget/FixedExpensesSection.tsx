@@ -41,7 +41,7 @@ export function FixedExpensesSection() {
           onCancel={() => setEditing(null)}
         />
       )}
-      <RecurringList items={items ?? []} onEdit={setEditing} onDelete={(id) => void repos.fixedExpenses.remove(id)} />
+      <RecurringList items={items ?? []} onEdit={setEditing} onDelete={(id) => repos.fixedExpenses.remove(id)} />
     </Panel>
   );
 }

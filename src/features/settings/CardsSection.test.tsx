@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { confirmTap } from "../../test/confirm";
 import { renderApp } from "../../test/render";
 import { makeCard, makePurchase } from "../../test/factories";
 import { CardsSection } from "./CardsSection";
@@ -33,8 +34,7 @@ describe("CardsSection", () => {
     const card = makeCard({ name: "Master" });
     await repos.cards.put(card);
     await repos.purchases.put(makePurchase({ cardId: card.id, firstMonth: "2099-01" }));
-    await user.click(await screen.findByRole("button", { name: "Borrar" }));
-    await user.click(screen.getByRole("button", { name: "¿Seguro? Tocá de nuevo" }));
+    await confirmTap(user, await screen.findByRole("button", { name: "Borrar" }));
     expect(await screen.findByText(/tiene cuotas pendientes/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Archivar tarjeta" }));
     expect(await screen.findByText("archivada")).toBeInTheDocument();
@@ -46,10 +46,8 @@ describe("CardsSection", () => {
     const card = makeCard({ name: "Amex" });
     await repos.cards.put(card);
     await repos.purchases.put(makePurchase({ cardId: card.id, firstMonth: "2099-01" }));
-    await user.click(await screen.findByRole("button", { name: "Borrar" }));
-    await user.click(screen.getByRole("button", { name: "¿Seguro? Tocá de nuevo" }));
-    await user.click(await screen.findByRole("button", { name: "Borrar tarjeta y sus compras" }));
-    await user.click(screen.getByRole("button", { name: "¿Seguro? Tocá de nuevo" }));
+    await confirmTap(user, await screen.findByRole("button", { name: "Borrar" }));
+    await confirmTap(user, await screen.findByRole("button", { name: "Borrar tarjeta y sus compras" }));
     await waitFor(async () => {
       expect(await repos.cards.list()).toEqual([]);
       expect(await repos.purchases.list()).toEqual([]);

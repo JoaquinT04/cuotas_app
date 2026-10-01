@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { makeCard } from "../../test/factories";
+import { confirmTap } from "../../test/confirm";
 import { renderApp } from "../../test/render";
 import { SCHEMA_VERSION } from "../../data/db";
 import { BackupSection } from "./BackupSection";
@@ -34,8 +35,7 @@ describe("BackupSection", () => {
     };
     await user.upload(screen.getByLabelText("Importar backup"), file(JSON.stringify(backup)));
     expect(await screen.findByText(/1 tarjetas/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Reemplazar mis datos" }));
-    await user.click(screen.getByRole("button", { name: "¿Seguro? Tocá de nuevo" }));
+    await confirmTap(user, screen.getByRole("button", { name: "Reemplazar mis datos" }));
     expect(await screen.findByText("Datos importados.")).toBeInTheDocument();
     expect((await repos.cards.list()).map((c) => c.name)).toEqual(["Nueva"]);
   });

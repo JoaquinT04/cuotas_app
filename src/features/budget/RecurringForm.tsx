@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import type { z } from "zod";
+import { useAction } from "../../app/hooks";
 import { CURRENCIES, formatMoneyInput, parseMoneyInput, type Currency, type Money } from "../../domain/money";
 import type { Month } from "../../domain/month";
 import { fixedExpenseInputSchema, incomeInputSchema } from "../../domain/schemas";
@@ -33,8 +34,9 @@ export function RecurringForm({ withCategory = false, initial, defaultStartMonth
   const [endMonth, setEndMonth] = useState(initial?.endMonth ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const submit = useAction(onSubmit);
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const parsedAmount = parseMoneyInput(amount);
     const schema: z.ZodType<RecurringValues> = withCategory ? fixedExpenseInputSchema : incomeInputSchema;
@@ -52,7 +54,7 @@ export function RecurringForm({ withCategory = false, initial, defaultStartMonth
       setErrors(errs);
       return;
     }
-    await onSubmit(result.data);
+    void submit.run(result.data);
   }
 
   return (
@@ -86,7 +88,7 @@ export function RecurringForm({ withCategory = false, initial, defaultStartMonth
         </Field>
       )}
       <div className="flex gap-2">
-        <button type="submit" className={buttonClass}>Guardar</button>
+        <button type="submit" className={buttonClass} disabled={submit.pending}>Guardar</button>
         <button type="button" className={secondaryButtonClass} onClick={onCancel}>Cancelar</button>
       </div>
     </form>

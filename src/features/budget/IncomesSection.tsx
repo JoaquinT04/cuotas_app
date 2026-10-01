@@ -33,7 +33,7 @@ export function IncomesSection() {
           onCancel={() => setEditing(null)}
         />
       )}
-      <RecurringList items={items ?? []} onEdit={setEditing} onDelete={(id) => void repos.incomes.remove(id)} />
+      <RecurringList items={items ?? []} onEdit={setEditing} onDelete={(id) => repos.incomes.remove(id)} />
     </Panel>
   );
 }

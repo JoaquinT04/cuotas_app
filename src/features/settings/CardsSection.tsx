@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAppData, useCards, usePurchases, useToday } from "../../app/hooks";
+import { useAction, useAppData, useCards, usePurchases, useToday } from "../../app/hooks";
 import { newEntity } from "../../data/repository";
 import { isFinished } from "../../domain/installments";
 import type { Card, CardInput } from "../../domain/schemas";
@@ -17,6 +17,10 @@ export function CardsSection() {
   const { month } = useToday();
   const [editing, setEditing] = useState<Card | "new" | null>(null);
   const [blocked, setBlocked] = useState<Card | null>(null);
+  const archive = useAction(async (card: Card) => {
+    await repos.cards.put({ ...card, archived: true });
+    setBlocked(null);
+  });
 
   if (!cards || !purchases) return null;
 
@@ -30,11 +34,6 @@ export function CardsSection() {
   async function deleteWithPurchases(card: Card) {
     for (const p of purchasesOf(card.id)) await repos.purchases.remove(p.id);
     await repos.cards.remove(card.id);
-    setBlocked(null);
-  }
-
-  async function archive(card: Card) {
-    await repos.cards.put({ ...card, archived: true });
     setBlocked(null);
   }
 
@@ -67,7 +66,7 @@ export function CardsSection() {
         <div role="alert" className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm dark:bg-amber-950">
           <p>{blocked.name} tiene cuotas pendientes. Podés archivarla (sus cuotas siguen contando) o borrarla junto con sus compras.</p>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className={secondaryButtonClass} onClick={() => void archive(blocked)}>
+            <button type="button" className={secondaryButtonClass} disabled={archive.pending} onClick={() => void archive.run(blocked)}>
               Archivar tarjeta
             </button>
             <ConfirmButton label="Borrar tarjeta y sus compras" className={dangerButtonClass} onConfirm={() => deleteWithPurchases(blocked)} />

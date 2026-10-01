@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
-import { useAppData, useCategories } from "../../app/hooks";
+import { useAction, useAppData, useCategories } from "../../app/hooks";
 import { newEntity } from "../../data/repository";
 import { CURRENCIES, formatMoney, formatMoneyInput, parseMoneyInput, type Currency } from "../../domain/money";
 import { budgetCategoryInputSchema, type BudgetCategory, type BudgetCategoryInput } from "../../domain/schemas";
@@ -19,8 +19,9 @@ function CategoryForm({ initial, onSubmit, onCancel }: {
   const [amount, setAmount] = useState(initial ? formatMoneyInput(initial.monthlyAmount) : "");
   const [currency, setCurrency] = useState<Currency>(initial?.currency ?? "ARS");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const submit = useAction(onSubmit);
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const parsedAmount = parseMoneyInput(amount);
     const result = budgetCategoryInputSchema.safeParse({ name, monthlyAmount: parsedAmount ?? Number.NaN, currency });
@@ -30,7 +31,7 @@ function CategoryForm({ initial, onSubmit, onCancel }: {
       setErrors(errs);
       return;
     }
-    await onSubmit(result.data);
+    void submit.run(result.data);
   }
 
   return (
@@ -51,7 +52,7 @@ function CategoryForm({ initial, onSubmit, onCancel }: {
         </Field>
       </div>
       <div className="flex gap-2">
-        <button type="submit" className={buttonClass}>Guardar</button>
+        <button type="submit" className={buttonClass} disabled={submit.pending}>Guardar</button>
         <button type="button" className={secondaryButtonClass} onClick={onCancel}>Cancelar</button>
       </div>
     </form>

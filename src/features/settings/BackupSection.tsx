@@ -1,5 +1,5 @@
 import { useId, useState, type ChangeEvent } from "react";
-import { useAppData, useMeta } from "../../app/hooks";
+import { useAction, useAppData, useMeta } from "../../app/hooks";
 import {
   backupFileName, backupSummary, exportBackup, importBackup, parseBackupText, type BackupFile,
 } from "../../data/backup";
@@ -16,16 +16,12 @@ export function BackupSection() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function handleExport() {
+  const exportAction = useAction(async () => {
     downloadJson(backupFileName(), await exportBackup(db));
     setMessage("Backup exportado.");
-  }
+  }, "No se pudo exportar el backup.");
 
-  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
-    const input = e.target;
-    const selected = input.files?.[0];
-    input.value = "";
-    if (!selected) return;
+  const readFile = useAction(async (selected: File) => {
     const result = parseBackupText(await selected.text());
     setMessage(null);
     if (!result.ok) {
@@ -35,6 +31,13 @@ export function BackupSection() {
     }
     setError(null);
     setPending(result.backup);
+  }, "No se pudo leer el archivo.");
+
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const selected = input.files?.[0];
+    input.value = "";
+    if (selected) void readFile.run(selected);
   }
 
   async function confirmImport() {
@@ -54,13 +57,13 @@ export function BackupSection() {
         {meta?.lastBackupAt && ` Último: ${new Date(meta.lastBackupAt).toLocaleDateString("es-AR")}.`}
       </p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={buttonClass} onClick={() => void handleExport()}>
+        <button type="button" className={buttonClass} disabled={exportAction.pending} onClick={() => void exportAction.run()}>
           Exportar backup
         </button>
         <label htmlFor={`${id}-file`} className={`${secondaryButtonClass} cursor-pointer`}>
           Importar backup
         </label>
-        <input id={`${id}-file`} type="file" accept="application/json,.json" className="sr-only" onChange={(e) => void handleFile(e)} />
+        <input id={`${id}-file`} type="file" accept="application/json,.json" className="sr-only" onChange={handleFile} />
       </div>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       {message && <p role="status" className="text-sm text-green-700 dark:text-green-400">{message}</p>}

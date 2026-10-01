@@ -15,7 +15,7 @@ interface Item {
 interface Props<T extends Item> {
   items: T[];
   onEdit: (item: T) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }
 
 export function RecurringList<T extends Item>({ items, onEdit, onDelete }: Props<T>) {

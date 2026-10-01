@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
+import { useAction } from "../../app/hooks";
 import { cardInputSchema, type Card, type CardInput } from "../../domain/schemas";
 import { Field } from "../../ui/Field";
 import { fieldErrors } from "../../ui/formErrors";
@@ -21,8 +22,9 @@ export function CardForm({ initial, defaultColor, onSubmit, onCancel }: Props) {
   const [dueDay, setDueDay] = useState(initial?.dueDay?.toString() ?? "");
   const [archived, setArchived] = useState(initial?.archived ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const submit = useAction(onSubmit);
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const result = cardInputSchema.safeParse({
       name,
@@ -35,7 +37,7 @@ export function CardForm({ initial, defaultColor, onSubmit, onCancel }: Props) {
       setErrors(fieldErrors(result.error));
       return;
     }
-    await onSubmit(result.data);
+    void submit.run(result.data);
   }
 
   return (
@@ -61,7 +63,7 @@ export function CardForm({ initial, defaultColor, onSubmit, onCancel }: Props) {
         </label>
       )}
       <div className="flex gap-2">
-        <button type="submit" className={buttonClass}>Guardar</button>
+        <button type="submit" className={buttonClass} disabled={submit.pending}>Guardar</button>
         <button type="button" className={secondaryButtonClass} onClick={onCancel}>Cancelar</button>
       </div>
     </form>

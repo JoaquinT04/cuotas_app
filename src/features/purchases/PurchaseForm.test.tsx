@@ -9,7 +9,10 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(2026, 8, 10, 12));
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 async function setup(onSaved = vi.fn()) {
   const user = userEvent.setup();
@@ -97,5 +100,27 @@ describe("PurchaseForm", () => {
     await screen.findByRole("option", { name: "Visa" });
     expect(await screen.findByText(/Todos los meses quedan en positivo/)).toBeInTheDocument();
     expect(screen.queryByText(/junio/i)).not.toBeInTheDocument();
+  });
+
+  it("doble toque en Guardar compra guarda una sola vez", async () => {
+    const { user, onSaved, repos } = await setup();
+    await user.type(screen.getByLabelText("Descripción"), "Tele");
+    await user.type(screen.getByLabelText("Valor de la cuota"), "1000");
+    await user.dblClick(screen.getByRole("button", { name: "Guardar compra" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(await repos.purchases.list()).toHaveLength(1);
+    expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it("si guardar falla avisa y no sigue", async () => {
+    const { user, onSaved, db } = await setup();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(db.purchases, "put").mockRejectedValue(new Error("disco lleno"));
+    await user.type(screen.getByLabelText("Descripción"), "Tele");
+    await user.type(screen.getByLabelText("Valor de la cuota"), "1000");
+    await user.click(screen.getByRole("button", { name: "Guardar compra" }));
+    expect(await screen.findByText("No se pudo guardar. Probá de nuevo.")).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Guardar compra" })).toBeEnabled();
   });
 });
